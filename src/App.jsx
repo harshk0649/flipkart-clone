@@ -5,12 +5,15 @@ import { AuthProvider } from "./context/AuthContext";
 
 // Import pages
 import Home from "./pages/Home";
+import SimpleHome from "./pages/SimpleHome";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import Profile from "./pages/Profile";
 import Orders from "./pages/Orders";
 import Wishlist from "./pages/Wishlist";
+import TestPage from "./pages/TestPage";
+import Debug from "./pages/Debug";
 import NotFound from "./pages/NotFound";
 
 // Import components
@@ -35,6 +38,8 @@ function App() {
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/orders" element={<Orders />} />
                 <Route path="/wishlist" element={<Wishlist />} />
+                <Route path="/test" element={<TestPage />} />
+                <Route path="/debug" element={<Debug />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </main>

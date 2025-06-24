@@ -12,7 +12,7 @@ import { useApp } from "../context/AppContext";
 import { useAuth } from "../context/AuthContext";
 import { categories } from "../data/products";
 import SearchSuggestions from "./SearchSuggestions";
-import Login from "./Login";
+import LoginSimple from "./LoginSimple";
 import Signup from "./Signup";
 
 const Header = () => {
@@ -335,7 +335,7 @@ const Header = () => {
       </div>
 
       {/* Login Modal */}
-      <Login
+      <LoginSimple
         isOpen={showLogin}
         onClose={() => setShowLogin(false)}
         switchToSignup={() => {

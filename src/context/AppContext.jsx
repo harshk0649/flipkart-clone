@@ -1,115 +1,126 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect } from "react";
 
 // Initial state
 const initialState = {
   cart: [],
   user: null,
-  searchQuery: '',
-  selectedCategory: 'all',
+  searchQuery: "",
+  selectedCategory: "all",
   priceRange: [0, 100000],
-  sortBy: 'relevance',
+  sortBy: "relevance",
   isLoading: false,
-  error: null
+  error: null,
 };
 
 // Action types
 export const ACTIONS = {
-  ADD_TO_CART: 'ADD_TO_CART',
-  REMOVE_FROM_CART: 'REMOVE_FROM_CART',
-  UPDATE_CART_QUANTITY: 'UPDATE_CART_QUANTITY',
-  CLEAR_CART: 'CLEAR_CART',
-  SET_USER: 'SET_USER',
-  SET_SEARCH_QUERY: 'SET_SEARCH_QUERY',
-  SET_CATEGORY: 'SET_CATEGORY',
-  SET_PRICE_RANGE: 'SET_PRICE_RANGE',
-  SET_SORT_BY: 'SET_SORT_BY',
-  SET_LOADING: 'SET_LOADING',
-  SET_ERROR: 'SET_ERROR'
+  ADD_TO_CART: "ADD_TO_CART",
+  REMOVE_FROM_CART: "REMOVE_FROM_CART",
+  UPDATE_CART_QUANTITY: "UPDATE_CART_QUANTITY",
+  CLEAR_CART: "CLEAR_CART",
+  SET_CART: "SET_CART",
+  SET_USER: "SET_USER",
+  SET_SEARCH_QUERY: "SET_SEARCH_QUERY",
+  SET_CATEGORY: "SET_CATEGORY",
+  SET_PRICE_RANGE: "SET_PRICE_RANGE",
+  SET_SORT_BY: "SET_SORT_BY",
+  SET_LOADING: "SET_LOADING",
+  SET_ERROR: "SET_ERROR",
 };
 
 // Reducer function
 function appReducer(state, action) {
   switch (action.type) {
     case ACTIONS.ADD_TO_CART: {
-      const existingItem = state.cart.find(item => item.id === action.payload.id);
+      const existingItem = state.cart.find(
+        (item) => item.id === action.payload.id
+      );
       if (existingItem) {
         return {
           ...state,
-          cart: state.cart.map(item =>
+          cart: state.cart.map((item) =>
             item.id === action.payload.id
               ? { ...item, quantity: item.quantity + 1 }
               : item
-          )
+          ),
         };
       }
       return {
         ...state,
-        cart: [...state.cart, { ...action.payload, quantity: 1 }]
+        cart: [...state.cart, { ...action.payload, quantity: 1 }],
       };
     }
 
     case ACTIONS.REMOVE_FROM_CART:
       return {
         ...state,
-        cart: state.cart.filter(item => item.id !== action.payload)
+        cart: state.cart.filter((item) => item.id !== action.payload),
       };
 
     case ACTIONS.UPDATE_CART_QUANTITY:
       return {
         ...state,
-        cart: state.cart.map(item =>
-          item.id === action.payload.id
-            ? { ...item, quantity: action.payload.quantity }
-            : item
-        ).filter(item => item.quantity > 0)
+        cart: state.cart
+          .map((item) =>
+            item.id === action.payload.id
+              ? { ...item, quantity: action.payload.quantity }
+              : item
+          )
+          .filter((item) => item.quantity > 0),
       };
 
     case ACTIONS.CLEAR_CART:
       return {
         ...state,
-        cart: []
+        cart: [],
+      };
+
+    case ACTIONS.SET_CART:
+      return {
+        ...state,
+        cart: action.payload,
       };
 
     case ACTIONS.SET_USER:
       return {
         ...state,
-        user: action.payload
+        user: action.payload,
       };
 
     case ACTIONS.SET_SEARCH_QUERY:
       return {
         ...state,
-        searchQuery: action.payload
+        searchQuery: action.payload,
       };
 
     case ACTIONS.SET_CATEGORY:
       return {
         ...state,
-        selectedCategory: action.payload
+        selectedCategory: action.payload,
       };
 
     case ACTIONS.SET_PRICE_RANGE:
       return {
         ...state,
-        priceRange: action.payload
+        priceRange: action.payload,
       };
 
     case ACTIONS.SET_SORT_BY:
       return {
         ...state,
-        sortBy: action.payload
+        sortBy: action.payload,
       };
 
     case ACTIONS.SET_LOADING:
       return {
         ...state,
-        isLoading: action.payload
+        isLoading: action.payload,
       };
 
     case ACTIONS.SET_ERROR:
       return {
         ...state,
-        error: action.payload
+        error: action.payload,
       };
 
     default:
@@ -126,22 +137,23 @@ export function AppProvider({ children }) {
 
   // Load cart from localStorage on mount
   useEffect(() => {
-    const savedCart = localStorage.getItem('flipkart-cart');
+    const savedCart = localStorage.getItem("flipkart-cart");
     if (savedCart) {
       try {
         const cartData = JSON.parse(savedCart);
-        cartData.forEach(item => {
-          dispatch({ type: ACTIONS.ADD_TO_CART, payload: item });
-        });
+        // Set the entire cart at once instead of adding items one by one
+        if (cartData.length > 0) {
+          dispatch({ type: "SET_CART", payload: cartData });
+        }
       } catch (error) {
-        console.error('Error loading cart from localStorage:', error);
+        console.error("Error loading cart from localStorage:", error);
       }
     }
   }, []);
 
   // Save cart to localStorage whenever cart changes
   useEffect(() => {
-    localStorage.setItem('flipkart-cart', JSON.stringify(state.cart));
+    localStorage.setItem("flipkart-cart", JSON.stringify(state.cart));
   }, [state.cart]);
 
   // Helper functions
@@ -154,7 +166,10 @@ export function AppProvider({ children }) {
   };
 
   const updateCartQuantity = (productId, quantity) => {
-    dispatch({ type: ACTIONS.UPDATE_CART_QUANTITY, payload: { id: productId, quantity } });
+    dispatch({
+      type: ACTIONS.UPDATE_CART_QUANTITY,
+      payload: { id: productId, quantity },
+    });
   };
 
   const clearCart = () => {
@@ -186,8 +201,14 @@ export function AppProvider({ children }) {
   };
 
   // Calculate cart totals
-  const cartTotal = state.cart.reduce((total, item) => total + (item.price * item.quantity), 0);
-  const cartItemCount = state.cart.reduce((count, item) => count + item.quantity, 0);
+  const cartTotal = state.cart.reduce(
+    (total, item) => total + item.price * item.quantity,
+    0
+  );
+  const cartItemCount = state.cart.reduce(
+    (count, item) => count + item.quantity,
+    0
+  );
 
   const value = {
     ...state,
@@ -202,21 +223,17 @@ export function AppProvider({ children }) {
     setLoading,
     setError,
     cartTotal,
-    cartItemCount
+    cartItemCount,
   };
 
-  return (
-    <AppContext.Provider value={value}>
-      {children}
-    </AppContext.Provider>
-  );
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
 
 // Custom hook to use the context
 export function useApp() {
   const context = useContext(AppContext);
   if (!context) {
-    throw new Error('useApp must be used within an AppProvider');
+    throw new Error("useApp must be used within an AppProvider");
   }
   return context;
 }

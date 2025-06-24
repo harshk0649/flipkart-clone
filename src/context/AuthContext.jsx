@@ -1,41 +1,44 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect } from "react";
+
+// Simple mock-only authentication for now
+const apiService = null;
 
 const AuthContext = createContext();
 
 // Auth reducer
 const authReducer = (state, action) => {
   switch (action.type) {
-    case 'LOGIN_START':
+    case "LOGIN_START":
       return { ...state, loading: true, error: null };
-    case 'LOGIN_SUCCESS':
-      return { 
-        ...state, 
-        loading: false, 
-        isAuthenticated: true, 
+    case "LOGIN_SUCCESS":
+      return {
+        ...state,
+        loading: false,
+        isAuthenticated: true,
         user: action.payload,
-        error: null 
+        error: null,
       };
-    case 'LOGIN_FAILURE':
-      return { 
-        ...state, 
-        loading: false, 
-        isAuthenticated: false, 
+    case "LOGIN_FAILURE":
+      return {
+        ...state,
+        loading: false,
+        isAuthenticated: false,
         user: null,
-        error: action.payload 
+        error: action.payload,
       };
-    case 'LOGOUT':
-      return { 
-        ...state, 
-        isAuthenticated: false, 
+    case "LOGOUT":
+      return {
+        ...state,
+        isAuthenticated: false,
         user: null,
-        error: null 
+        error: null,
       };
-    case 'UPDATE_PROFILE':
-      return { 
-        ...state, 
-        user: { ...state.user, ...action.payload }
+    case "UPDATE_PROFILE":
+      return {
+        ...state,
+        user: { ...state.user, ...action.payload },
       };
-    case 'CLEAR_ERROR':
+    case "CLEAR_ERROR":
       return { ...state, error: null };
     default:
       return state;
@@ -47,128 +50,145 @@ const initialState = {
   isAuthenticated: false,
   user: null,
   loading: false,
-  error: null
+  error: null,
 };
 
-// Mock users database (in real app, this would be API calls)
-const mockUsers = [
-  {
-    id: 1,
-    email: 'demo@flipkart.com',
-    password: 'demo123',
-    firstName: 'John',
-    lastName: 'Doe',
-    phone: '+91 9876543210',
-    addresses: [
-      {
-        id: 1,
-        type: 'Home',
-        name: 'John Doe',
-        phone: '+91 9876543210',
-        address: '123 Main Street, Apartment 4B',
-        city: 'Mumbai',
-        state: 'Maharashtra',
-        pincode: '400001',
-        isDefault: true
-      }
-    ],
-    orders: [],
-    wishlist: []
-  }
-];
+// Mock authentication - no external database needed
 
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
   // Check for existing session on mount
   useEffect(() => {
-    const savedUser = localStorage.getItem('flipkart_user');
+    const savedUser = localStorage.getItem("flipkart_user");
     if (savedUser) {
       try {
         const user = JSON.parse(savedUser);
-        dispatch({ type: 'LOGIN_SUCCESS', payload: user });
+        dispatch({ type: "LOGIN_SUCCESS", payload: user });
       } catch (error) {
-        localStorage.removeItem('flipkart_user');
+        localStorage.removeItem("flipkart_user");
       }
     }
   }, []);
 
   // Login function
   const login = async (email, password) => {
-    dispatch({ type: 'LOGIN_START' });
-    
+    dispatch({ type: "LOGIN_START" });
+
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Find user in mock database
-      const user = mockUsers.find(u => u.email === email && u.password === password);
-      
-      if (user) {
-        const { password: _, ...userWithoutPassword } = user;
-        localStorage.setItem('flipkart_user', JSON.stringify(userWithoutPassword));
-        dispatch({ type: 'LOGIN_SUCCESS', payload: userWithoutPassword });
+      // Try API first, fallback to mock if API fails
+      if (apiService) {
+        try {
+          const response = await apiService.login(email, password);
+
+          if (response.success && response.data) {
+            const userData = response.data.user;
+            localStorage.setItem("flipkart_user", JSON.stringify(userData));
+            localStorage.setItem("auth_token", response.data.token);
+            dispatch({ type: "LOGIN_SUCCESS", payload: userData });
+            return { success: true };
+          } else {
+            throw new Error("Login failed");
+          }
+        } catch (apiError) {
+          console.warn(
+            "API login failed, trying mock login:",
+            apiError.message
+          );
+        }
+      } else {
+        console.log("API service not available, using mock login");
+      }
+
+      // Fallback to mock login
+      if (email === "demo@flipkart.com" && password === "demo123") {
+        const mockUser = {
+          id: 1,
+          email: "demo@flipkart.com",
+          firstName: "John",
+          lastName: "Doe",
+          phone: "+91 9876543210",
+        };
+        localStorage.setItem("flipkart_user", JSON.stringify(mockUser));
+        dispatch({ type: "LOGIN_SUCCESS", payload: mockUser });
         return { success: true };
       } else {
-        throw new Error('Invalid email or password');
+        throw new Error("Invalid email or password");
       }
     } catch (error) {
-      dispatch({ type: 'LOGIN_FAILURE', payload: error.message });
-      return { success: false, error: error.message };
+      const errorMessage = error.message || "Invalid email or password";
+      dispatch({ type: "LOGIN_FAILURE", payload: errorMessage });
+      return { success: false, error: errorMessage };
     }
   };
 
   // Signup function
   const signup = async (userData) => {
-    dispatch({ type: 'LOGIN_START' });
-    
+    dispatch({ type: "LOGIN_START" });
+
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Check if user already exists
-      const existingUser = mockUsers.find(u => u.email === userData.email);
-      if (existingUser) {
-        throw new Error('User with this email already exists');
+      // Try API first, fallback to mock if API fails
+      if (apiService) {
+        try {
+          const response = await apiService.signup(userData);
+
+          if (response.success && response.data) {
+            const userInfo = response.data.user;
+            localStorage.setItem("flipkart_user", JSON.stringify(userInfo));
+            localStorage.setItem("auth_token", response.data.token);
+            dispatch({ type: "LOGIN_SUCCESS", payload: userInfo });
+            return { success: true };
+          } else {
+            throw new Error("Signup failed");
+          }
+        } catch (apiError) {
+          console.warn(
+            "API signup failed, using mock signup:",
+            apiError.message
+          );
+        }
+      } else {
+        console.log("API service not available, using mock signup");
       }
-      
-      // Create new user
-      const newUser = {
-        id: mockUsers.length + 1,
-        ...userData,
-        addresses: [],
-        orders: [],
-        wishlist: []
+
+      // Fallback to mock signup
+      const mockUser = {
+        id: Date.now(),
+        email: userData.email,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        phone: userData.phone,
       };
-      
-      mockUsers.push(newUser);
-      
-      const { password: _, ...userWithoutPassword } = newUser;
-      localStorage.setItem('flipkart_user', JSON.stringify(userWithoutPassword));
-      dispatch({ type: 'LOGIN_SUCCESS', payload: userWithoutPassword });
+      localStorage.setItem("flipkart_user", JSON.stringify(mockUser));
+      dispatch({ type: "LOGIN_SUCCESS", payload: mockUser });
       return { success: true };
     } catch (error) {
-      dispatch({ type: 'LOGIN_FAILURE', payload: error.message });
-      return { success: false, error: error.message };
+      const errorMessage = error.message || "Signup failed";
+      dispatch({ type: "LOGIN_FAILURE", payload: errorMessage });
+      return { success: false, error: errorMessage };
     }
   };
 
   // Logout function
   const logout = () => {
-    localStorage.removeItem('flipkart_user');
-    dispatch({ type: 'LOGOUT' });
+    localStorage.removeItem("flipkart_user");
+    localStorage.removeItem("auth_token");
+    if (apiService && apiService.setToken) {
+      apiService.setToken(null);
+    }
+    dispatch({ type: "LOGOUT" });
   };
 
   // Update profile function
   const updateProfile = (profileData) => {
     const updatedUser = { ...state.user, ...profileData };
-    localStorage.setItem('flipkart_user', JSON.stringify(updatedUser));
-    dispatch({ type: 'UPDATE_PROFILE', payload: profileData });
+    localStorage.setItem("flipkart_user", JSON.stringify(updatedUser));
+    dispatch({ type: "UPDATE_PROFILE", payload: profileData });
   };
 
   // Clear error function
   const clearError = () => {
-    dispatch({ type: 'CLEAR_ERROR' });
+    dispatch({ type: "CLEAR_ERROR" });
   };
 
   const value = {
@@ -177,20 +197,16 @@ export const AuthProvider = ({ children }) => {
     signup,
     logout,
     updateProfile,
-    clearError
+    clearError,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
